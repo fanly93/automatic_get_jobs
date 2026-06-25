@@ -1,0 +1,31 @@
+# 参考项目（第三方代码，不纳入版本控制）
+reference_projects/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Java / Maven
+ai-job-dev/ai-job-hunting-server/target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node
+ai-job-dev/ai-job-hunting-ui/node_modules/
+ai-job-dev/ai-job-hunting-ui/dist/
+
+# 日志
+*.log
+ai-job-dev/ai-job-hunting-server/src/main/resources/docker/ai-job.jar
+
+# 环境配置
+.env
+.env.local
+
+# Claude 本地设置
+.claude/settings.local.json
