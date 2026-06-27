@@ -37,8 +37,6 @@ services:
       - mysql.host=mysql
       - MYSQL_USER=root
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
-      - SMART_USERNAME=${SMART_USERNAME:-admin}
-      - SMART_PASSWORD=${SMART_PASSWORD:-change-me-please}
     command:
       - /app/ai-job.jar
       - --smart.config.webui.port=6768
