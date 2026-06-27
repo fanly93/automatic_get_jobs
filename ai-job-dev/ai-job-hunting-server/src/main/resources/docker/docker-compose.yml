@@ -1,29 +1,57 @@
-version: "3"
-
 services:
-  ai-job:
-    container_name: "ai-job"
-    image: "ai-job:1.0"
+  mysql:
+    image: mysql:8.0
+    container_name: ai-job-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-root}
+      MYSQL_DATABASE: ai_job
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - ai-job-mysql-data:/var/lib/mysql
+      - ../schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
-      - data_smart_course
+      - ai-job-net
+
+  ai-job:
+    container_name: ai-job
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "9100:9100"
       - "6768:6768"
     volumes:
-      - /app/ai-job/:/app/logs
-    # 会覆盖dockerfile中的cmd命令
-    command: '/app/ai-job.jar --smart.config.webui.port=6768 --smart.config.desc.infer=true'
-    privileged: true
-
-    # 如果使用docker部署，并使用默认properties文件，请指定mysql.host环境变量
+      - ai-job-logs:/app/logs
     environment:
       - TZ=Asia/Shanghai
+      - mysql.host=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
+      - SMART_USERNAME=${SMART_USERNAME:-admin}
+      - SMART_PASSWORD=${SMART_PASSWORD:-change-me-please}
+    command:
+      - /app/ai-job.jar
+      - --smart.config.webui.port=6768
+      - --smart.config.desc.infer=true
+    networks:
+      - ai-job-net
 
+# Remote SSL extension: for non-local deployments, put nginx in front of port
+# 9100 with a certificate and point the userscript default server to that HTTPS
+# domain. Localhost does not need SSL.
+volumes:
+  ai-job-mysql-data:
+  ai-job-logs:
 
-# 我这里已经存在这个网络了
 networks:
-  data_smart_course:
-    external: true
-
-
-
+  ai-job-net:
