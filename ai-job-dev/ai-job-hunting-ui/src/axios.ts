@@ -1,7 +1,5 @@
 import axios from "axios";
 import {ElMessage} from "./utils/tools";
-import {BizCodeEnum} from "./types";
-import {ProductStore} from "./stores";
 import {ServerStore} from "./stores/server";
 
 
@@ -27,7 +25,7 @@ request.interceptors.request.use(req => {
             req.baseURL = serverStore.baseUrl
         } catch (e) {
             // 如果在 Pinia 初始化前调用了 axios，回退到默认地址
-            req.baseURL = 'https://43.138.246.37/'
+            req.baseURL = 'http://127.0.0.1:9100'
         }
 
         let authorization = localStorage.getItem('Authorization');
@@ -38,16 +36,6 @@ request.interceptors.request.use(req => {
         return req;
     }
 )
-
-function handlerErrorCode(result: any) {
-    if (!result || result?.code < 5000) {
-        return;
-    }
-    if (result.code === BizCodeEnum.PRODUCT_NOT_AUTHORIZED) {
-        const productStore = ProductStore()
-        productStore.setShowProduct(true)
-    }
-}
 
 /**
  * 响应拦截器
@@ -84,7 +72,6 @@ request.interceptors.response.use((resp: any) => {
                 type: "error",
                 message: result.message ? result.message : '系统异常'
             });
-            handlerErrorCode(result);
         }
         // 使请求不进入正常的响应处理函数
         return Promise.reject(result.message)

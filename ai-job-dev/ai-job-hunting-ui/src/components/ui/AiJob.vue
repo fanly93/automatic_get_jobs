@@ -116,7 +116,7 @@
     </div>
 
     <el-dialog v-model="aiSeatBuyVisible" :show-close="false" width="800">
-        <template #header="{ close, titleId, titleClass }">
+        <template #header="{ close }">
             <div class="my-header">
                 <el-text size="large" style="font-size: 20px" type="info">产品列表</el-text>
                 <el-button type="warning" @click="close">
@@ -163,65 +163,7 @@
                 <br>
             </div>
 
-            <!--            搜索展示不做条件限制-->
-            <!--            <div v-show="!showOtherProduct" type="info">-->
-            <div  type="info" style="margin-top: 10px">
-                <el-button type="danger" :icon="Shop" @click="showOrderGroup">
-                    更多产品
-                </el-button>
-                <el-input :suffix-icon="Wallet" v-model="promotionCode" style="margin-left: 10px;width: 240px" placeholder="请输入您的优惠码" />
-                <el-link :icon="PriceTag" type="primary" style="margin-left: 30px;" target="_blank" href="https://www.bilibili.com/video/BV1HKAyebESp">点击获取优惠码(评论区)</el-link>
-
-            </div>
-
-            <el-empty v-show="!buyProductList?.length && !showOtherProduct" :image-size="50" description="购买产品为空，请点击更多产品查看"/>
-
-            <!--订单组二维码-->
-            <div v-if="showOtherProduct" v-loading="productListLoading">
-                <br>
-                <p>
-                    <el-text class="mx-1" type="danger">定价说明：</el-text>
-                    使用R1深度思考大模型时：首先，R1的价格更贵，深度思考的内容也会被记录token消耗。token消耗量巨大。同时由于boss的会话聊天机制，需要携带消息上下文调用。这也就意味着对话轮数越多，token消耗越多。按乘方的趋势增长。
-                </p>
-                <br>
-                <div v-for="order in orderGroup" :key="order" style="display: flex" class="block"
-                     :style="'width: '+1/orderGroup.length">
-                    <!--订单标题-->
-                    <div style="padding-top: 10px;min-width: 8%;">
-                        <p class="demonstration">
-                            <el-text size="large" type="primary">{{ order.title }}</el-text>
-                        </p>
-                        <p class="demonstration">
-                            <el-text size="large" type="success">{{ order.validDays }}天</el-text>
-                        </p>
-                        <p class="demonstration">
-                            <el-text size="large" type="danger">￥ {{ order.totalAmount }}</el-text>
-                        </p>
-                    </div>
-
-                    <!--图片二维码-->
-                    <el-image style="width: 100px; height: 100px" :src="'data:image/png;base64,'+order.qrCodeBase64"
-                              fit="fill">
-                        <template #error>
-                            <div class="image-slot">加载订单二维码失败；请稍后刷新重试</div>
-                        </template>
-                    </el-image>
-
-                    <div style="width: 80%">
-                        <!--产品能力标签-->
-                        <div>
-                            提供能力:
-                            <el-tag style="margin: 10px;" v-for="tag in order.tags" :key="tag" :type="randomStyle()"
-                                    size="large" effect="light">{{ tag }}
-                            </el-tag>
-                        </div>
-                        <!--产品推广描述-->
-                        <div>
-                            <span class="demonstration">{{ order.desc }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <el-empty v-show="!buyProductList?.length" :image-size="50" description="暂无产品记录；本地自托管版本已开放全部能力"/>
 
         </template>
     </el-dialog>
@@ -229,14 +171,13 @@
 
 <script setup lang="ts">
 import axiosOriginal, {AxiosInstance} from "axios";
-import {CircleCloseFilled, PriceTag, Promotion, Service, Shop, Upload, Wallet, Collection, RefreshRight} from '../icons';
-import {h, inject, ref, Ref, onMounted, onUnmounted} from "vue";
+import {CircleCloseFilled, Promotion, Service, Upload, Collection, RefreshRight} from '../icons';
+import {h, inject, ref, onUnmounted} from "vue";
 import {PushStatus} from "../../enums";
 import {AbsPlatform} from "../../platform/platform";
 import {Tools} from "../../platform/utils";
 import {ElMessage, fetchWithGM_request, isProdEnv, loginInterceptor, silentlyLogin} from "../../utils/tools";
 import logger from '../../logging'
-import {SSEClient} from "../../utils/sse";
 import {LoginStore, pushResultCount, UserStore} from "../../stores";
 import {ServerStore} from "../../stores/server";
 import {ElNotification} from "element-plus";
@@ -307,7 +248,7 @@ const handleResetServer = async () => {
         await handleUpdateServer();
     } else {
         // 容错处理
-        const DEFAULT_URL = 'https://43.138.246.37/';
+        const DEFAULT_URL = 'http://127.0.0.1:9100';
         serverStore.setBaseUrl(DEFAULT_URL);
         tempServerUrl.value = DEFAULT_URL;
         ElMessage.success('已重置为默认服务器地址');
@@ -320,22 +261,14 @@ const pushBtnType = ref<'primary' | 'warning'>('primary')
 const pushBtnText = ref<string>('开始投递')
 const aiSeatBuyVisible = ref(false)
 const importResumeLoading = ref<boolean>(false);
-const productListLoading = ref<boolean>(false);
 
 // 创建日志记录器实例
 const logRecorder = new LogRecorder();
 const latestPushRecords = ref<{ level: string; message: string; timestamp: string }[]>([]);
-let recordsUpdateTimer: number | null = null;
+let recordsUpdateTimer: ReturnType<typeof setInterval> | null = null;
 
 // 已经购买产品
 const buyProductList = ref([])
-
-// 显示其他产品
-const showOtherProduct = ref(true)
-const orderGroup: Ref = ref([])
-const payStatus = ref(false)
-const promotionCode = ref('')
-const lastPromotionCode = ref('')
 
 let loginStore = LoginStore();
 let pushResultCounter = pushResultCount();
@@ -567,99 +500,12 @@ const handlerAISeatClick = async () => {
         await queryBuyProductList()
     }
 
-    // if (buyProductList.value.length > 0) {
-    //     // 显示产品集合
-    //     return;
-    // }
-    showOtherProduct.value = false
-
-    // 没有产品，直接调用接口生成订单组
-    // await showOrderGroup()
 }
 
 const queryBuyProductList = async () => {
     // 已购买产品集合
     let productResp = await axios.post("/api/product/user/product/list")
     buyProductList.value = productResp.data.data
-}
-
-const showOrderGroup = async () => {
-    if (!loginInterceptor()) {
-        return;
-    }
-    productListLoading.value = true
-    let promotionCodeVar = promotionCode.value.trim()
-    promotionCode.value = ''
-    setTimeout(() => {
-        showOtherProduct.value = true;
-    }, 100)
-    // 如果之前生成过订单，或者和上次的优惠码一致时，则不再生成订单
-    if (orderGroup.value.length < 1 || promotionCodeVar !== lastPromotionCode.value) {
-        // 生成订单组
-        let orderGroupResp = await axios.post("/api/pay/generate/order/group", {promotionCode: promotionCodeVar});
-        if (orderGroupResp.data.code != 200) {
-            ElMessage({
-                message: orderGroupResp.data.message,
-                type: 'warning',
-                duration: 3000
-            })
-            setTimeout(() => {
-                showOtherProduct.value = false;
-            }, 100)
-            productListLoading.value = false
-            return;
-        }
-        orderGroup.value = orderGroupResp.data.data
-        lastPromotionCode.value = promotionCodeVar
-        productListLoading.value = false
-    }
-    productListLoading.value = false
-
-    waitUsePay()
-}
-
-const waitUsePay = () => {
-    // 建立sse连接，用于服务端通知前端订单支付成功
-    const sseClient = new SSEClient(axios.defaults.baseURL + 'api/sse/connect');
-    sseClient.addOnMsgCallback((event: any) => {
-        let data = event.data;
-        if (data === "支付成功") {
-            // 支付成功，清除之前的付款二维码
-            payStatus.value = true
-            orderGroup.value = []
-            queryBuyProductList()
-            showOtherProduct.value = false
-            firstAiSeatStatus.value = 0;
-        }
-    })
-    sseClient.start();
-
-    // 半分钟之后主动查询订单状态
-    let count = 0;
-    let interval = setInterval(() => {
-        if (payStatus.value) {
-            // sse通知订单已经支付成功，取消轮询查询订单
-            clearInterval(interval)
-        }
-        orderGroup.value.forEach((orderItem: any) => {
-            axios.get("/api/pay/searchOrder?outTradeNo=" + orderItem.orderId).then(resp => {
-                if (resp.data.data === "TRADE_SUCCESS") {
-                    payStatus.value = true
-                    orderGroup.value = []
-                    clearInterval(interval)
-                }
-                if (resp.data.data === "WAIT_BUYER_PAY") {
-                    logger.debug("等待支付")
-                }
-
-                count++
-                if (count >= 10) {
-                    logger.warn("订单超时未支付")
-                    clearInterval(interval)
-                }
-            })
-        })
-    }, 30000);
 }
 
 const firstAiSeatStatus = ref(userStore.user.aiSeatStatus)
