@@ -1,14 +1,15 @@
 # 项目交接文档（Claude Code → Codex）
 
 > - **生成日期**：2026-06-28
+> - **最近更新**：2026-06-28（Codex Phase B 接手后更新）
 > - **用途**：从 Claude Code 切换到 Codex 继续开发。本文一次性加载即可了解全貌，按需查阅引用文档。**不需要每次加载到上下文。**
-> - **当前进度**：Phase A 已完成并推送到 GitHub，下一步 Phase B。
+> - **当前进度**：Phase A 已完成并推送到 GitHub；Phase B 已在 `phase-b-docker-compose` 分支完成并推送；下一步 Phase C。
 
 ---
 
 ## 0. 一句话定位
 
-把第三方收费项目 `ai-job`（BOSS直聘 AI 自动投递/打招呼工具）二次开发成**自托管、免费、接入自有 OpenAI 兼容模型**的版本。当前 Phase A（后端去付费）已完成。
+把第三方收费项目 `ai-job`（BOSS直聘 AI 自动投递/打招呼工具）二次开发成**自托管、免费、接入自有 OpenAI 兼容模型**的版本。当前 Phase A（后端去付费）已完成，Phase B（Docker Compose 本地部署）已完成。
 
 ---
 
@@ -118,11 +119,16 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
     └── 项目对比与选型建议.md
 ```
 
+**本机正确工作目录**：`/Users/tanglin/VibeCoding/GetJobs/AI-Job`
+
+> 注意：不要在 `/Users/tanglin/VibeCoding/AIStockMonitoring/` 下继续本项目任务。此前误拉取的 `/Users/tanglin/VibeCoding/AIStockMonitoring/automatic_get_jobs` 已按用户要求删除。
+
 ### ⚠️ 两个 git 仓库（重要！）
 
 1. **根仓库 `AI-Job/`** ← 推送到 GitHub 的仓库
    - 远程：`https://github.com/fanly93/automatic_get_jobs.git`
-   - 分支 `main`，2 个 commit
+   - `main`：Phase A + 交接文档
+   - `phase-b-docker-compose`：Phase B 已完成并推送
    - **要同步 GitHub，在这里 `git add && commit && push`**
 
 2. **子仓库 `ai-job-dev/`** ← 有自己的 `.git`
@@ -169,6 +175,36 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
 
 **Git**：根仓库 commit `c7ef0c3`，已 push 到 `origin/main`。
 
+### ✅ Phase B：Docker Compose 部署编排（已完成，已推送 GitHub 分支）
+
+**完成内容**：
+
+| Task | 改动 | 文件 |
+|------|------|------|
+| Task 7 Dockerfile | 基础镜像改为官方 `eclipse-temurin:17-jre`，修正 JVM 参数顺序为 `java -XX:+StartAttachListener -jar` | `ai-job-dev/ai-job-hunting-server/src/main/resources/docker/Dockerfile` |
+| Task 7 Compose | 新增 MySQL 8.0、healthcheck、内部网络、数据/日志 volume、schema 初始化挂载，移除外部网络依赖 | `ai-job-dev/ai-job-hunting-server/src/main/resources/docker/docker-compose.yml` |
+| Task 7 配置 | MySQL 用户/密码参数化，JDBC URL 增加 `allowPublicKeyRetrieval=true` 兼容 MySQL 8；SmartConfig 登录密码改为 `change-me-please` | `ai-job-dev/ai-job-hunting-server/src/main/resources/application.properties` |
+
+**SmartConfig 登录说明**：
+- 地址：`http://127.0.0.1:6768/`
+- 用户名：`admin`
+- 密码：`change-me-please`
+- 注意：`smart-config-core` 的 `StringLineLoader` 只按 `key=value` 读配置文件，不解析 Spring `${ENV:default}` 占位符。因此 `smart.username` / `smart.password` 不能写成 `${SMART_USERNAME:...}` 这类形式，否则登录会把占位符字面量当作密码。
+
+**验收**：
+- `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home mvn clean package -DskipTests -q` 通过
+- `docker compose build && docker compose up -d --force-recreate` 通过
+- `ai-job-mysql` healthy，`ai-job` running
+- `curl http://127.0.0.1:9100/` 返回 `200`
+- `curl http://127.0.0.1:6768/` 返回 `200`
+- SmartConfig 登录接口 `admin / change-me-please` 返回 `{"code":200,"message":"success","data":null}`
+
+**Git**：
+- `8a29274 feat: add Docker Compose deployment for ai-job`
+- `e1f5852 fix: make SmartConfig login usable in Docker`
+- 分支：`phase-b-docker-compose`
+- 远程：已 push 到 `origin/phase-b-docker-compose`
+
 ### ⚠️ 过程中解决的两个预存在缺陷（非 plan 预期，但必须修，否则编译不了）
 
 1. **项目根本没声明 Lombok 依赖**——原作者靠 IDE 插件编的，命令行 `mvn` 完全编不过。补了依赖 + `annotationProcessorPaths`（锁版本 1.18.36）。
@@ -177,12 +213,6 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
 ---
 
 ## 8. 未完成任务
-
-### 🔶 Phase B：部署容器化（下一阶段）
-- 改造 `ai-job-dev/ai-job-hunting-server/src/main/resources/docker/Dockerfile`：基础镜像 `maple20/jdk17_env:1.0`（作者私有镜像，可能拉不到）→ 官方 `eclipse-temurin:17-jre`
-- 改造 `docker-compose.yml`：加 MySQL 8.0 服务、healthcheck、依赖顺序、删除 `external` 网络依赖
-- 参数化 `application.properties`：MySQL 地址/密码、SmartConfig 密码（`admin/123456` → 环境变量）
-- 验收：两容器 Up + `curl 127.0.0.1:9100` 非 000 + 6768 可达 + 密码已参数化
 
 ### 🔶 Phase C：前端改造与重编译
 - Task 4：改 `axios.ts:30`/`stores/server.ts:6`/`AiJob.vue:310` 三处旧服务器地址 → `http://127.0.0.1:9100`
@@ -203,17 +233,17 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
 
 ---
 
-## 9. 下一阶段计划（Phase B 详细）
+## 9. 下一阶段计划（Phase C）
 
-完整步骤见 `docs/superpowers/plans/2026-06-24-ai-job-secondary-dev.md` 的 **Task 7**（第 422 行起）。要点：
+完整步骤见 `docs/superpowers/plans/2026-06-24-ai-job-secondary-dev.md` 的 **Task 4、Task 5、Task 6、Task 10**。要点：
 
-1. 改 `Dockerfile` 用 `eclipse-temurin:17-jre`
-2. `application.properties` 参数化（SmartConfig 密码、MySQL 凭据）
-3. 重写 `docker-compose.yml` 加 MySQL 服务
-4. `mvn clean package -DskipTests` 打 jar
-5. 复制 jar 到 docker 目录，`docker compose build && up -d`
-6. 验证容器启动 + 端口可达
-7. 在根仓库 commit + push
+1. 改 `ai-job-hunting-ui/src/axios.ts:30`、`stores/server.ts:6`、`components/ui/AiJob.vue:310` 三处旧服务器地址为 `http://127.0.0.1:9100`
+2. 删除 `Product.vue` / `AiJob.vue` 收款码渲染，以及 `Panel.vue` 购买/兑换菜单
+3. `pnpm build` 重编译油猴脚本
+4. 验证 `grep -c "43.138.246.37" ai-job-hunting.user.js` 为 `0`
+5. 验证购买入口和 `qrCodeBase64` 相关产物已移除
+6. 按 Task 10 安装 Vitest 并补 Panel/AiConfig 组件测试
+7. 在根仓库提交并推送到 `https://github.com/fanly93/automatic_get_jobs.git`
 
 ---
 
@@ -233,15 +263,15 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
 
 ## 11. 关键文件位置（二次开发改动点）
 
-**已改（Phase A）**：
+**已改（Phase A-B）**：
 - `ai-job-dev/ai-job-hunting-server/pom.xml` — Lombok + 删 javac 硬编码
 - `ai-job-dev/.../mapper/UserProductMapper.java:22` — 去付费闸门1
 - `ai-job-dev/.../frame/filter/ProductFilter.java:66` — 去付费闸门2
+- `ai-job-dev/.../src/main/resources/application.properties:32-39` — Phase B MySQL 参数化 + SmartConfig 登录密码改为 `change-me-please`
+- `ai-job-dev/.../src/main/resources/docker/Dockerfile` + `docker-compose.yml` — Phase B 后端+MySQL Docker Compose
 
-**待改（Phase B-E）**：
+**待改（Phase C-E）**：
 - `ai-job-dev/.../config/AppBizConfig.java:35` — OCR 路由 `use-ai-map`（Phase D）
-- `ai-job-dev/.../src/main/resources/application.properties:32-33,36-39` — 参数化（Phase B）
-- `ai-job-dev/.../src/main/resources/docker/Dockerfile` + `docker-compose.yml` — 容器化（Phase B）
 - `ai-job-dev/ai-job-hunting-ui/src/axios.ts:30`、`stores/server.ts:6`、`components/ui/AiJob.vue:310` — 旧服务器地址（Phase C）
 - `ai-job-dev/ai-job-hunting-ui/src/components/ui/Panel.vue`、`Product.vue`、`AiJob.vue` — 收款码删除（Phase C）
 
@@ -281,17 +311,25 @@ export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 - 前端 Vitest + jsdom mock `GM_*` API
 - 集成测试需 MySQL（Phase D 用 Phase B 的容器）
 
+### 12.7 正确仓库路径
+- 后续任务只在 `/Users/tanglin/VibeCoding/GetJobs/AI-Job/` 继续。
+- 不要在 `/Users/tanglin/VibeCoding/AIStockMonitoring/` 下处理本项目。
+- 误创建的 `/Users/tanglin/VibeCoding/AIStockMonitoring/automatic_get_jobs` 已删除。
+- 根仓库里未跟踪的 `.claude/` 是用户本地配置，除非用户明确要求，不要纳入提交。
+
 ---
 
 ## 13. 给 Codex 的快速启动建议
 
 1. **先读本文件**（你正在做）
 2. **如需细节**，按需读第 10 节的引用文档（不要全读，按当前阶段需要）
-3. **开始 Phase B**：按 `docs/superpowers/plans/2026-06-24-ai-job-secondary-dev.md` 的 Task 7 执行
-4. **每个 mvn 命令带 `JAVA_HOME`**（见 12.1）
-5. **完成后在根仓库 commit + push**
-6. **每阶段结束停下汇报**，等用户确认再进下一阶段（用户的工作习惯）
+3. **确认工作目录**：`/Users/tanglin/VibeCoding/GetJobs/AI-Job/`
+4. **当前分支**：Phase B 产物在 `phase-b-docker-compose`，已推送到 GitHub
+5. **下一步 Phase C**：按 `docs/superpowers/plans/2026-06-24-ai-job-secondary-dev.md` 的 Task 4/5/6/10 执行
+6. **每个 mvn 命令带 `JAVA_HOME`**（见 12.1）
+7. **完成后在根仓库 commit + push**
+8. **每阶段结束停下汇报**，等用户确认再进下一阶段（用户的工作习惯）
 
 ---
 
-*本文档由 Claude Code 生成，基于实际开发过程（含踩坑记录）。所有 git commit、文件改动均已验证。*
+*本文档由 Claude Code 生成，Codex 于 2026-06-28 按实际 Phase B 接手结果更新。*
