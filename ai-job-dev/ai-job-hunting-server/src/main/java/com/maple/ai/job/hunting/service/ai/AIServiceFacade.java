@@ -156,6 +156,10 @@ public class AIServiceFacade {
 
 
     public AiFileResolveResult readFile(InputStream inputStream, String ask) {
+        UserAIConfigDO config = userAIConfigMapper.getEnabledConfig(HeaderContext.getHeader().getUserId());
+        if (config != null) {
+            return customOpenAIService.readFile(inputStream, ask);
+        }
         AIService aiService = aiServiceMap.get(appBizConfig.getSceneUseAiMap().getOrDefault("file", "kimi"));
         return aiService.readFile(inputStream, ask);
     }

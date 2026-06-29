@@ -1,9 +1,11 @@
 package com.maple.ai.job.hunting.service.ai.impl;
 
 import cn.hutool.json.JSONUtil;
+import com.maple.ai.job.hunting.common.HeaderContext;
 import com.maple.ai.job.hunting.config.ai.KimiAIConfig;
 import com.maple.ai.job.hunting.config.ai.OpenAIPoolConfig;
 import com.maple.ai.job.hunting.emums.AITypeEnum;
+import com.maple.ai.job.hunting.emums.AiFileResolveResultTypeEnum;
 import com.maple.ai.job.hunting.entity.MsgSessionDO;
 import com.maple.ai.job.hunting.frame.exp.AIPowerException;
 import com.maple.ai.job.hunting.frame.exp.ApplicationException;
@@ -11,6 +13,7 @@ import com.maple.ai.job.hunting.model.AiFileResolveResult;
 import com.maple.ai.job.hunting.model.ChatSessionResult;
 import com.maple.ai.job.hunting.model.openai.OpenaiMessage;
 import com.maple.ai.job.hunting.service.ai.AbstractAIService;
+import com.maple.ai.job.hunting.utils.FileTypeDetector;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
@@ -18,13 +21,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.ChatResponse;
 import org.springframework.ai.chat.Generation;
+import org.springframework.ai.chat.messages.Media;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatClient;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -125,7 +134,44 @@ public class OpenAIService extends AbstractAIService {
 
     @Override
     public AiFileResolveResult readFile(InputStream inputStream, String ask) {
-        return null;
+        OpenAiChatClient client = getClient();
+        try {
+            byte[] fileBytes = inputStream.readAllBytes();
+            UserMessage userMessage = new UserMessage(ask, Collections.singletonList(new Media(resolveMimeType(fileBytes), fileBytes)));
+            ChatResponse chatResponse = client.call(new Prompt(userMessage));
+            Generation generation = chatResponse.getResult();
+            if (generation == null) {
+                throw new ApplicationException("openai返回文件识别结果为空");
+            }
+            String result = generation.getOutput().getContent();
+            return AiFileResolveResult.builder()
+                    .originalFileContent(result)
+                    .resolveResultType(AiFileResolveResultTypeEnum.UNRESOLVED)
+                    .resolveResult(null)
+                    .extra(null)
+                    .build();
+        } catch (IOException e) {
+            throw new ApplicationException("读取文件失败: " + e.getMessage());
+        } catch (Exception e) {
+            if (client instanceof OpenAIPoolConfig.OpenAIPoolClient openAIPoolClient) {
+                throw new AIPowerException(openAIPoolClient.getName(), e.getMessage());
+            }
+            if (client instanceof KimiAIConfig.KimiAIChatClient) {
+                throw new AIPowerException("kimi", e.getMessage());
+            }
+            if (this.getClass().equals(CustomOpenAIService.class)) {
+                throw new AIPowerException("custom", "read-file-" + HeaderContext.getHeader().getUserId(), e.getMessage());
+            }
+            throw new AIPowerException("unknown", e.getMessage());
+        }
+    }
+
+    private MimeType resolveMimeType(byte[] fileBytes) {
+        return switch (FileTypeDetector.detectFileType(fileBytes)) {
+            case "jpg" -> MimeTypeUtils.IMAGE_JPEG;
+            case "pdf" -> MimeTypeUtils.parseMimeType("application/pdf");
+            default -> MimeTypeUtils.IMAGE_PNG;
+        };
     }
 
     protected OpenAiChatClient getClient() {

@@ -29,10 +29,10 @@ public class AppBizConfig {
      * {
      *   "ask": "openai-pool",
      *   "session": "openai-pool",
-     *   "file": "kimi"
+     *   "file": "openai-pool"
      * }
      */
-    @JsonValue("${use-ai-map:{\"ask\":\"openai-pool\",\"session\":\"openai-pool\",\"file\":\"kimi\"}}")
+    @JsonValue("${use-ai-map:{\"ask\":\"openai-pool\",\"session\":\"openai-pool\",\"file\":\"openai-pool\"}}")
     private Map<String, String> sceneUseAiMap;
 
     @JsonValue("${admin.userId.list:[1]}")
