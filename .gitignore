@@ -28,7 +28,7 @@ ai-job-dev/ai-job-hunting-server/src/main/resources/docker/ai-job.jar
 .env.local
 
 # Claude 本地设置
-.claude/settings.local.json
+.claude/
 
 # 临时备份的 ai-job-dev git 历史
 ai-job-dev/.git_backup_phase_a/
