@@ -6,6 +6,7 @@ import {ElMessage as originalElMessage, MessageParams} from "element-plus";
 import {LogRecorder} from "../logging/record";
 import axiosOriginal from "axios";
 import {GM_xmlhttpRequest} from "$";
+import {NeedsImportError} from "../stores/userSync";
 
 const logRecorder = new LogRecorder();
 let loginIng = false;
@@ -22,46 +23,56 @@ export const silentlyLogin = async (bossUserId: string) => {
     loginIng = true;
     let loginStore = LoginStore();
 
-    // 等待token
-    let token = Tools.window?._PAGE?.token;
-    let count = 0
-    while (!token && count < 3) {
-        await Tools.sleep(300)
-        token = Tools.window?._PAGE?.token;
-        count++
-    }
+    try {
+        // 等待 BOSS SPA 初始化身份信息。Tampermonkey 可能早于 _PAGE 注入执行。
+        let token = Tools.window?._PAGE?.token || Tools.getCookieValue("bst");
+        const maxIdentityWaitCount = 20;
+        let count = 0
+        while ((!token || (!bossUserId && !Tools.window?._PAGE?.uid)) && count < maxIdentityWaitCount) {
+            await Tools.sleep(500)
+            token = Tools.window?._PAGE?.token || Tools.getCookieValue("bst");
+            count++
+        }
 
-    if (!token) {
-        logRecorder.info("未登录Boss，静默登录结束")
-        return Promise.reject(new Error("未登录Boss，静默登录失败"));
-    }
-    if (!bossUserId) {
-        bossUserId = Tools.window?._PAGE?.uid;
-    }
-    if (loginStore.login) {
-        logger.info("已经登录，静默登录结束")
-        loginIng = false;
-        return Promise.resolve();
-    }
+        if (!token) {
+            logRecorder.info("未登录Boss，静默登录结束")
+            return Promise.reject(new Error("未登录Boss，静默登录失败"));
+        }
+        if (!bossUserId) {
+            bossUserId = Tools.window?._PAGE?.uid;
+        }
+        if (!bossUserId) {
+            logRecorder.info("未获取到Boss userId，静默登录结束")
+            return Promise.reject(new Error("未获取到Boss userId，静默登录失败"));
+        }
+        if (loginStore.login) {
+            logger.info("已经登录，静默登录结束")
+            return Promise.resolve();
+        }
 
-    return await axios.post("/api/user/silently/login?uniqueId=" + bossUserId).then(async resp => {
-        // 用户不存在，直接导入信息注册
+        const resp = await axios.post("/api/user/silently/login?uniqueId=" + bossUserId)
+        // 用户不存在时只结束静默登录，导入简历必须由用户主动触发。
         if (resp.data.code === 2000) {
-            logRecorder.info("开始自动注册")
-            await handlerImport({value: false})
-            loginStore.loginSuccess()
-            return;
+            loginStore.loginFail()
+            throw new NeedsImportError(bossUserId)
+        }
+        if (resp.data.code !== 200) {
+            loginStore.loginFail()
+            return Promise.reject(new Error(resp.data.message || resp.data.msg || "静默登录失败"))
         }
         localStorage.setItem('Authorization', resp.data.data);
         loginStore.loginSuccess()
         logRecorder.info("静默登录成功")
-    }).catch(e => {
+        return Promise.resolve()
+    } catch (e) {
         logRecorder.error("静默登录失败", e)
-        loginStore.loginFail()
+        if (!(e instanceof NeedsImportError)) {
+            loginStore.loginFail()
+        }
         return Promise.reject(e)
-    }).finally(() => {
+    } finally {
         loginIng = false;
-    })
+    }
 
 }
 

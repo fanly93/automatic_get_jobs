@@ -1,5 +1,5 @@
 <template>
-    <div class="container">
+    <div class="container" @pointerdown.stop @pointerup.stop @click.stop @mousedown.stop @mouseup.stop>
     <el-menu
             default-active="1"
             class="el-menu-demo"

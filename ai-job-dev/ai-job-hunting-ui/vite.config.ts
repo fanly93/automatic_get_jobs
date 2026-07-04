@@ -32,11 +32,15 @@ export default defineConfig(({mode}) => {
             userscript: {
                 name: "AI工作猎手-让ai帮您找工作！",
                 author: "maple.",
-                version: '0.0.24-beta',
+                version: '0.0.27-local',
                 license: 'Apache License 2.0',
                 icon: 'https://gitee.com/yangfeng20/ai-job/raw/master/file/icon.png',
                 description: "找工作，用AI工作猎手！让AI帮您找工作！ai坐席：【DeepSeek+ChatGpt】赋能，ai助理作为您的求职者分身24小时 * 7在线找工作，并结合您的简历信息定制化回复。批量投递，自动发送简历，交换联系方式。hr拒绝挽留。高意向邮件通知，让您不错过每一份工作机会。BOSS直聘",
                 namespace: 'https://github.com/yangfeng20',
+                require: [
+                    'https://cdn.jsdelivr.net/npm/bytebuffer@5.0.1/dist/bytebuffer.min.js',
+                    'https://cdn.jsdelivr.net/npm/protobufjs@5.0.3/dist/protobuf.min.js',
+                ],
                 connect: ["docdownload.zhipin.com"],
                 updateURL: "https://gitee.com/yangfeng20/ai-job/raw/master/ai-job-hunting.user.js",
                 downloadURL: "https://gitee.com/yangfeng20/ai-job/raw/master/ai-job-hunting.user.js",
@@ -48,7 +52,6 @@ export default defineConfig(({mode}) => {
                         .concat('https://unpkg.com/vue-demi@latest/lib/index.iife.js')
                         .concat(util.dataUrl(";window.Vue=Vue;")),
                     "element-plus": cdn.jsdelivr("ElementPlus", "dist/index.full.min.js"),
-                    protobufjs: cdn.jsdelivr("protobuf", "dist/protobuf.min.js"),
                     pinia: cdn.jsdelivr("Pinia", "dist/pinia.iife.prod.js"),
                     "event-source-polyfill": cdn.jsdelivr("EventSourcePolyfill", "src/eventsource.min.js"),
                 },

@@ -13,7 +13,6 @@ import {PushResultStatus, PushStatus} from "../enums";
 import {Message} from "../webSocket/protobuf";
 import {LogRecorder} from "../logging/record";
 import {pushResultCount, UserStore} from "../stores";
-import {userRemoteLoad} from "../stores/remote";
 import {AiPower} from "./aiPower";
 
 let pushResultCounter: any;
@@ -231,10 +230,25 @@ class BossPlatform extends AbsPlatform {
         return PlatformTypeEnum.Boss;
     }
 
+    private isJobsPageReady(): boolean {
+        const body = document.body;
+        if (!body || body.innerText.includes("加载中，请稍候")) {
+            return false;
+        }
+        return !!(
+            document.querySelector(".job-recommend-result") ||
+            document.querySelector(".job-list-box") ||
+            document.querySelector(".job-list-container") ||
+            document.querySelector(".page-jobs-main") ||
+            document.querySelector(".job-card-wrap") ||
+            document.querySelector(".job-card-wrapper")
+        );
+    }
 
     getMountEle(): Promise<ElementP> {
         return new Promise<ElementP>((resolve) => {
             let count: number = 0;
+            const maxMountAttempts = 100;
             let interval = setInterval(() => {
                 let element: Element | null = null;
                 let p = "";
@@ -247,8 +261,10 @@ class BossPlatform extends AbsPlatform {
                     p = "end";
                 }
                 if (this.curUrl.includes("www.zhipin.com/web/geek/jobs")) {
-                    element = document.querySelector(".job-recommend-result");
-                    // p = "end";
+                    if (this.isJobsPageReady()) {
+                        element = document.body;
+                        p = "floating";
+                    }
                 } else if (this.curUrl.includes("www.zhipin.com/web/geek/job")) {
                     element = document.querySelector(".page-job-inner");
                 }
@@ -264,10 +280,13 @@ class BossPlatform extends AbsPlatform {
                         p: p
                     })
                 }
-                if (count >= 3) {
+                if (count >= maxMountAttempts) {
                     clearInterval(interval);
                     logger.error(PlatformTypeEnum.Boss, "获取平台挂载元素失败")
-                    return document.createElement("div")
+                    return resolve({
+                        el: document.body || document.documentElement,
+                        p: "end"
+                    })
                 }
                 count++;
             }, 300);
@@ -713,7 +732,6 @@ class PlatformFactory {
                 pushResultCounter = pushResultCount();
                 userStore = UserStore();
                 userStore.platformType = platformInstance.getPlatformType();
-                userRemoteLoad()
                 return platformInstance;
             }
         }

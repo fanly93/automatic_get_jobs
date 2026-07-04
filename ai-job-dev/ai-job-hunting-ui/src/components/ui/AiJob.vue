@@ -68,7 +68,6 @@
         </el-button>
     </el-tooltip>
 
-    <el-button type="warning" :icon="Collection as any" color="#626aef" @click.stop="handlerAISeatClick" :disabled="!serverStore.isOnline">产品列表</el-button>
     <el-tooltip effect="dark" raw-content content="
     AI坐席：<span style='color:red;'>支持试用，点击开关开启试用</span><br/>
     - 自动响应hr的消息,根据您的简历信息进行定制化回答。<br/>
@@ -115,121 +114,40 @@
         </el-button>
     </div>
 
-    <el-dialog v-model="aiSeatBuyVisible" :show-close="false" width="800">
-        <template #header="{ close }">
-            <div class="my-header">
-                <el-text size="large" style="font-size: 20px" type="info">产品列表</el-text>
-                <el-button type="warning" @click="close">
-                    <el-icon class="el-icon--left">
-                        <CircleCloseFilled/>
-                    </el-icon>
-                    关闭
-                </el-button>
-            </div>
-
-            <!--已购买产品-->
-            <div v-show="buyProductList.length>0">
-                <br>
-                <h3>我的产品列表</h3>
-                <br>
-                <el-table v-show="buyProductList.length>0" :data="buyProductList" stripe style="width: 100%">
-                    <el-table-column prop="productName" label="产品" width="180">
-                        <template v-slot="{ row }">
-                            <span :style="{ textDecoration: isExpired(row) ? 'line-through' : 'none' }">
-                                {{ row.productName }}
-                            </span>
-                        </template>
-                    </el-table-column>
-
-                    <!-- 状态列 -->
-                    <el-table-column label="状态" width="100">
-                        <template v-slot="{ row }">
-                            <span :style="{ color: isExpired(row) ? 'red' : 'green' }">
-                                {{ isExpired(row) ? '过期' : '正常' }}
-                            </span>
-                        </template>
-                    </el-table-column>
-
-                    <el-table-column prop="powerList" label="能力" width="180">
-                        <template v-slot="{ row }">
-                            <div v-for="power in row.powerList" :key="power">
-                                <el-tag effect="dark" :type="randomStyle()" size="small">{{ power }}</el-tag>
-                            </div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="periodOfValidityStartTime" label="有效期开始时间"/>
-                    <el-table-column prop="periodOfValidityEndTime" label="有效期结束时间"/>
-                </el-table>
-                <br>
-            </div>
-
-            <el-empty v-show="!buyProductList?.length" :image-size="50" description="暂无产品记录；本地自托管版本已开放全部能力"/>
-
-        </template>
-    </el-dialog>
 </template>
 
 <script setup lang="ts">
 import axiosOriginal, {AxiosInstance} from "axios";
-import {CircleCloseFilled, Promotion, Service, Upload, Collection, RefreshRight} from '../icons';
-import {h, inject, ref, onUnmounted} from "vue";
+import {CircleCloseFilled, Promotion, Service, Upload, RefreshRight} from '../icons';
+import {inject, ref, onUnmounted} from "vue";
 import {PushStatus} from "../../enums";
 import {AbsPlatform} from "../../platform/platform";
 import {Tools} from "../../platform/utils";
-import {ElMessage, fetchWithGM_request, isProdEnv, loginInterceptor, silentlyLogin} from "../../utils/tools";
+import {ElMessage, fetchWithGM_request, isProdEnv, loginInterceptor} from "../../utils/tools";
 import logger from '../../logging'
-import {LoginStore, pushResultCount, UserStore} from "../../stores";
+import {pushResultCount, UserStore} from "../../stores";
 import {ServerStore} from "../../stores/server";
 import {ElNotification} from "element-plus";
 import {LogRecorder} from "../../logging/record";
-
-import {userRemoteLoad} from "../../stores/remote";
+import {ensureUserReady} from "../../stores/remote";
+import {UserSyncStore} from "../../stores/userSync";
 
 const platform = inject('$platform') as AbsPlatform;
 const axios = inject('$axios') as AxiosInstance
 const serverStore = ServerStore();
+const userSyncStore = UserSyncStore();
 const tempServerUrl = ref(serverStore.baseUrl);
 
 const handleUpdateServer = async () => {
     serverStore.setBaseUrl(tempServerUrl.value);
     await serverStore.checkConnection();
     if (serverStore.isOnline) {
-        // 连接成功后，立即尝试加载/同步配置
-        userRemoteLoad();
-
-        const countdown = ref(3);
-        let timer: any = null;
-
-        const notifyInstance = ElNotification({
+        ElNotification({
             title: '连接成功',
+            message: '服务器连接正常，在线功能将在使用时同步用户状态',
             type: 'success',
-            duration: 0, // 不自动关闭
-            message: h(() => h('div', null, [
-                h('p', null, '已成功连接到服务器，正在同步配置...'),
-                h('p', {style: 'color: #E6A23C; margin-top: 5px; font-weight: bold;'}, `页面将在 ${countdown.value} 秒后自动刷新以同步登录状态`),
-                h('div', {style: 'margin-top: 10px; text-align: right;'}, [
-                    h('button', {
-                        class: 'el-button el-button--small el-button--warning',
-                        onClick: () => {
-                            if (timer) {
-                                clearInterval(timer);
-                                timer = null;
-                                notifyInstance.close();
-                                ElMessage.info('已取消自动刷新，请手动刷新以同步登录');
-                            }
-                        }
-                    }, '取消刷新')
-                ])
-            ])) as any
+            duration: 3000
         });
-
-        timer = setInterval(() => {
-            countdown.value--;
-            if (countdown.value <= 0) {
-                clearInterval(timer);
-                window.location.reload();
-            }
-        }, 1000);
     } else {
         ElNotification({
             title: '连接失败',
@@ -259,7 +177,6 @@ const handleResetServer = async () => {
 const pushStatus = ref(PushStatus.NOT_START)
 const pushBtnType = ref<'primary' | 'warning'>('primary')
 const pushBtnText = ref<string>('开始投递')
-const aiSeatBuyVisible = ref(false)
 const importResumeLoading = ref<boolean>(false);
 
 // 创建日志记录器实例
@@ -267,10 +184,6 @@ const logRecorder = new LogRecorder();
 const latestPushRecords = ref<{ level: string; message: string; timestamp: string }[]>([]);
 let recordsUpdateTimer: ReturnType<typeof setInterval> | null = null;
 
-// 已经购买产品
-const buyProductList = ref([])
-
-let loginStore = LoginStore();
 let pushResultCounter = pushResultCount();
 
 const userStore = UserStore();
@@ -324,19 +237,6 @@ const stopRecordsUpdate = () => {
         recordsUpdateTimer = null;
     }
 };
-
-const isExpired = (row: any): boolean => {
-    const currentTime = new Date();
-    const endTime = new Date(row.periodOfValidityEndTime);
-    return currentTime > endTime;
-}
-
-
-const randomStyle = (): string => {
-    const tagStyleArr = ['primary', 'warning', 'success', 'danger']
-    let number = Math.floor(Math.random() * 4);
-    return tagStyleArr[number];
-}
 
 // 滚动到页面顶部
 const scrollToTop = () => {
@@ -403,6 +303,8 @@ const handlerImport = async () => {
     }
     let loginResp = await axios.post("/api/user/silently/login?uniqueId=" + bossUserId)
     localStorage.setItem('Authorization', loginResp.data.data);
+    userSyncStore.clearNeedsImport(bossUserId);
+    await ensureUserReady('import-resume');
     if(!importResp.data.data.email){
         ElMessage({
             message: "导入简历成功；但未识别到邮箱，请在偏好设置中完善[通知邮箱]",
@@ -422,13 +324,13 @@ const handlerImport = async () => {
 const handlerPush = () => {
     switch (pushStatus.value) {
         case PushStatus.NOT_START:
-            startPush();
+            void startPush();
             break;
         case PushStatus.PUSHING:
             pausePush();
             break;
         case PushStatus.PAUSE:
-            startPush()
+            void startPush()
             break;
     }
 }
@@ -450,9 +352,13 @@ const selfDefPushCountLimitChange = (val: number) => {
 // 非生产环境支持mock投递
 const mockPush = ref<boolean>(false)
 
-const startPush = () => {
+const startPush = async () => {
 
     if (!loginInterceptor()) {
+        return;
+    }
+    if (!await ensureUserReady('start-push')) {
+        ElMessage.warning("请先导入简历后再开始投递");
         return;
     }
 
@@ -492,22 +398,6 @@ const pausePush = () => {
     stopRecordsUpdate();
 }
 
-const handlerAISeatClick = async () => {
-    //  显示弹窗
-    aiSeatBuyVisible.value = true
-
-    if (buyProductList.value.length <= 0) {
-        await queryBuyProductList()
-    }
-
-}
-
-const queryBuyProductList = async () => {
-    // 已购买产品集合
-    let productResp = await axios.post("/api/product/user/product/list")
-    buyProductList.value = productResp.data.data
-}
-
 const firstAiSeatStatus = ref(userStore.user.aiSeatStatus)
 setTimeout(() => {
     firstAiSeatStatus.value = userStore.user.aiSeatStatus
@@ -520,6 +410,10 @@ const handlerAISeatStatusChange = async (val: boolean) => {
     }
 
     if (!loginInterceptor()) {
+        return;
+    }
+    if (!await ensureUserReady('toggle-ai-seat')) {
+        userStore.user.aiSeatStatus = firstAiSeatStatus.value
         return;
     }
 
@@ -552,13 +446,6 @@ const handlerAISeatSwitchClick = async () => {
 // --------------------------------------------------事件处理-------------------------------------------------------------
 
 // --------------------------------------------------流程处理-------------------------------------------------------------
-
-// 静默登录
-if (!loginStore.login && !loginStore.loginFailStatus) {
-    logger.info("页面静默登录")
-    silentlyLogin("").catch(_ => {
-    })
-}
 
 // 组件卸载时清理定时器
 onUnmounted(() => {

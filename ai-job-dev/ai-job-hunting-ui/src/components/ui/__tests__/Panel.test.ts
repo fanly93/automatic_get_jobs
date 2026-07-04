@@ -30,4 +30,52 @@ describe('Panel', () => {
 
     expect(wrapper.text()).not.toContain('邀请兑换')
   })
+
+  it('keeps menu clicks from bubbling into the host page', async () => {
+    const host = document.createElement('div')
+    const hostClick = vi.fn()
+    host.addEventListener('click', hostClick)
+    document.body.appendChild(host)
+
+    const wrapper = mount(Panel, {
+      attachTo: host,
+      global: {
+        stubs: {
+          'el-menu': { template: '<nav><slot /></nav>' },
+          'el-menu-item': { template: '<button><slot /></button>' },
+        },
+      },
+    })
+
+    await wrapper.find('button').trigger('click')
+
+    expect(hostClick).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+    host.remove()
+  })
+
+  it('keeps pointer events from bubbling into the host page', async () => {
+    const host = document.createElement('div')
+    const hostPointerDown = vi.fn()
+    host.addEventListener('pointerdown', hostPointerDown)
+    document.body.appendChild(host)
+
+    const wrapper = mount(Panel, {
+      attachTo: host,
+      global: {
+        stubs: {
+          'el-menu': { template: '<nav><slot /></nav>' },
+          'el-menu-item': { template: '<button><slot /></button>' },
+        },
+      },
+    })
+
+    await wrapper.find('button').trigger('pointerdown')
+
+    expect(hostPointerDown).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+    host.remove()
+  })
 })

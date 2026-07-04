@@ -7,6 +7,8 @@ import {AiPower} from "../platform/aiPower";
 import {LogRecorder} from "../logging/record";
 import {UserStore} from "../stores";
 
+declare const dcodeIO: any;
+
 const originalWebSocket = Tools.window.WebSocket as typeof WebSocket;
 const TARGET_URL: string = 'chat';
 const logRecorder: LogRecorder = new LogRecorder('hook');
@@ -161,6 +163,22 @@ setupCompleteWebSocketHook()
 
 //======================================================================================================================
 
+function bridgeLegacyDcodeIO() {
+    const legacyDcodeIO =
+        (typeof dcodeIO !== 'undefined' ? dcodeIO : undefined) ||
+        (typeof window !== 'undefined' ? (window as any).dcodeIO : undefined) ||
+        (typeof globalThis !== 'undefined' ? (globalThis as any).dcodeIO : undefined) ||
+        (typeof self !== 'undefined' ? (self as any).dcodeIO : undefined);
+
+    if (legacyDcodeIO && !Tools.window.dcodeIO) {
+        Tools.window.dcodeIO = legacyDcodeIO;
+    }
+
+    return Tools.window.dcodeIO || legacyDcodeIO;
+}
+
+//======================================================================================================================
+
 // 设置拦截器函数
 function setSendInterceptor(interceptor: (data: any) => any) {
     sendInterceptor = interceptor;
@@ -277,8 +295,12 @@ async function setChatWebsocket(): Promise<void> {
     return fetch("https://static.zhipin.com/assets/zhipin/geek/socket.js?v=20250313")
         .then((res) => res.text())
         .then((code) => {
+            const legacyDcodeIO = bridgeLegacyDcodeIO();
+            if (!legacyDcodeIO?.ProtoBuf) {
+                logger.warn("legacy dcodeIO ProtoBuf 未准备好，BOSS socket 脚本可能无法初始化");
+            }
             // 在代码开头注入所需的全局变量
-            let injectedVars = `const __PROTO_FILE_VAR__ = '${protoDefinition}';\n`;
+            let injectedVars = `const __PROTO_FILE_VAR__ = '${protoDefinition}';\nconst dcodeIO = Tools.window.dcodeIO;\nfunction getQueryString(name) {\n  return new URLSearchParams(Tools.window.location.search).get(name);\n}\n`;
 
             // 修改代码：在 ChatWebsocket 定义后暴露到 window
             let str = '\nTools.window.ChatWebsocketImage = ChatWebsocket;\nconsole.log("set ChatWebsocket 成功", ChatWebsocket)\n';

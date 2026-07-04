@@ -191,8 +191,7 @@
                 <template #label>
                     <el-checkbox v-model="userStore.user.preference.afE" label="" size="large"/>
                     <el-tooltip effect="dark" raw-content content="
-    批量投递时AI会通过你的提示词过滤筛选相应岗位<p/><span style='color:red;'>未在【产品列表】中购买【ai过滤】产品请勿开启,页面会报错
-    </span><br/>过滤提示词举例：我希望找到武汉的java岗位，薪资至少20K，不考虑学历要求为本科及以下、或者需要超过10年工作经验的职位。
+    批量投递时AI会通过你的提示词过滤筛选相应岗位<p/>过滤提示词举例：我希望找到武汉的java岗位，薪资至少20K，不考虑学历要求为本科及以下、或者需要超过10年工作经验的职位。
     </span><br/>与简历信息不互通，如果依赖您的某些信息，请通过提示词告知AI
     " placement="bottom">
                     AI 过滤(语义匹配)
@@ -338,6 +337,7 @@ import {AbsPlatform} from "../../platform/platform";
 
 import {ServerStore} from "../../stores/server";
 import {TampermonkeyApi} from "../../platform/utils";
+import {ensureUserReady} from "../../stores/remote";
 
 const axios = inject('$axios') as AxiosInstance
 const platform = inject('$platform') as AbsPlatform;
@@ -461,16 +461,29 @@ const submitForm = async (formEl: FormInstance | undefined) => {
     if (!valid) {
         return;
     }
+    const userSnapshot = JSON.parse(JSON.stringify(userStore.user))
 
     // 无论是否在线，都先更新本地镜像和全局最新镜像
     const mirrorKey = serverStore.getMirrorKey('user_config')
     const globalMirrorKey = serverStore.getGlobalMirrorKey('user_config')
-    TampermonkeyApi.GmSetValue(mirrorKey, userStore.user)
-    TampermonkeyApi.GmSetValue(globalMirrorKey, userStore.user)
+    TampermonkeyApi.GmSetValue(mirrorKey, userSnapshot)
+    TampermonkeyApi.GmSetValue(globalMirrorKey, userSnapshot)
+
+    const canSync = await ensureUserReady('save-preference')
+    Object.assign(userStore.user, userSnapshot)
+    if (!canSync) {
+        ElNotification({
+            title: '保存至本地',
+            message: '请先导入简历后再同步到服务器；当前配置已保存在本地镜像。',
+            type: 'warning',
+            duration: 4000
+        });
+        return;
+    }
 
     await axios.post("/api/user/save/preference", {
-        ...userStore.user,
-        aiSeatStatus: userStore.user.aiSeatStatus ? 1 : 0
+        ...userSnapshot,
+        aiSeatStatus: userSnapshot.aiSeatStatus ? 1 : 0
     })
         .then(resp => {
             ElMessage({

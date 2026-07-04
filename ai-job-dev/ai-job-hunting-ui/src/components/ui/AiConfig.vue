@@ -169,6 +169,7 @@ import {ElMessage} from '../../utils/tools'
 import {ElNotification} from 'element-plus'
 import {Tools, TampermonkeyApi} from "../../platform/utils";
 import {ServerStore} from "../../stores/server";
+import {ensureUserReady} from "../../stores/remote";
 
 const serverStore = ServerStore();
 
@@ -408,6 +409,15 @@ const handleSave = async () => {
         if (valid) {
             // 先保存到本地镜像
             updateAiConfigMirror(form.value)
+            const canSync = await ensureUserReady('save-ai-config')
+            if (!canSync) {
+                ElNotification({
+                    title: '保存至本地',
+                    message: '请先导入简历后再同步到服务器；AI配置已保存在本地镜像',
+                    type: 'warning'
+                })
+                return
+            }
             
             try {
                 const {userPrompt, ...rest} = form.value
@@ -436,6 +446,15 @@ const handleTempSave = async () => {
         if (valid) {
             // 先保存到本地镜像
             updateAiConfigMirror(form.value)
+            const canSync = await ensureUserReady('save-ai-config')
+            if (!canSync) {
+                ElNotification({
+                    title: '保存至本地',
+                    message: '请先导入简历后再同步到服务器；AI配置已保存在本地镜像',
+                    type: 'warning'
+                })
+                return
+            }
             
             try {
                 // 请求时排除from表单中的userPrompt
@@ -461,6 +480,15 @@ const handleTempSave = async () => {
 const handleSavePrompt = async () => {
     // 提示词也属于配置镜像的一部分
     updateAiConfigMirror(form.value)
+    const canSync = await ensureUserReady('save-ai-config')
+    if (!canSync) {
+        ElNotification({
+            title: '保存至本地',
+            message: '请先导入简历后再同步到服务器；提示词已保存在本地镜像',
+            type: 'warning'
+        })
+        return
+    }
     
     try {
         const resp = await axios.post('/api/user/ai/config/temp/save', {
@@ -484,6 +512,14 @@ const handleTest = async () => {
 
     await formRef.value.validate(async (valid: boolean) => {
         if (!valid) {
+            return;
+        }
+        if (!await ensureUserReady('test-ai-config')) {
+            ElNotification({
+                title: '无法测试',
+                message: '请先导入简历后再测试AI配置',
+                type: 'warning'
+            })
             return;
         }
         isTestLoading.value = true
