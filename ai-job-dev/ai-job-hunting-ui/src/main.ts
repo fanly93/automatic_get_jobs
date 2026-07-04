@@ -94,7 +94,7 @@ if (existingSingleton) {
             let p = elP.p
             rootApp.classList.toggle('ai-job-floating', p === "floating")
             if (p === "floating") {
-                currentBody.appendChild(rootApp)
+                containerEle.appendChild(rootApp)
             } else if (p === "before") {
                 containerEle.parentElement?.insertBefore(rootApp, containerEle)
             } else if (p === "end") {

@@ -119,15 +119,20 @@ describe('payment UI cleanup', () => {
     expect(platform).toContain('el: document.body')
   })
 
-  it('mounts the jobs page assistant as a body-level floating panel', () => {
+  it('mounts the jobs page assistant under a BOSS container instead of body', () => {
     const main = readSource('../../../main.ts')
     const platform = readSource('../../../platform/platform.ts')
     const style = readSource('../../../style.css')
 
+    expect(platform).toContain('getJobsPageMountContainer')
+    expect(platform).toContain('element = this.getJobsPageMountContainer()')
+    expect(platform).not.toContain('element = document.body')
     expect(platform).toContain('p = "floating"')
     expect(platform).toContain('isJobsPageReady')
     expect(platform).toContain('body.innerText.includes("加载中，请稍候")')
     expect(main).toContain("rootApp.classList.toggle('ai-job-floating', p === \"floating\")")
+    expect(main).toContain('containerEle.appendChild(rootApp)')
+    expect(main).not.toContain('currentBody.appendChild(rootApp)')
     expect(style).toContain('.ai-job-floating')
   })
 

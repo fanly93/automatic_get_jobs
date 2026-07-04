@@ -39,7 +39,7 @@ System.set("user:vue", (()=>{const _=Vue;('default' in _)||(_.default=_);return 
 System.set("user:pinia", (()=>{const _=Pinia;('default' in _)||(_.default=_);return _})());
 System.set("user:element-plus", (()=>{const _=ElementPlus;('default' in _)||(_.default=_);return _})());
 
-System.register("./__entry.js", ['./__monkey.entry-j75aQUo4.js'], (function (exports, module) {
+System.register("./__entry.js", ['./__monkey.entry-efAb2rZX.js'], (function (exports, module) {
 	'use strict';
 	return {
 		setters: [null],
@@ -51,7 +51,7 @@ System.register("./__entry.js", ['./__monkey.entry-j75aQUo4.js'], (function (exp
 	};
 }));
 
-System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus'], (function (exports, module) {
+System.register("./__monkey.entry-efAb2rZX.js", ['vue', 'pinia', 'element-plus'], (function (exports, module) {
   'use strict';
   var ref, reactive, computed, createApp, defineComponent, openBlock, createBlock, inject, shallowRef, resolveDynamicComponent, defineStore, createPinia, ElMessage$1, ElementPlus;
   return {
@@ -8313,6 +8313,9 @@ System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus']
           }
           return !!(document.querySelector(".job-recommend-result") || document.querySelector(".job-list-box") || document.querySelector(".job-list-container") || document.querySelector(".page-jobs-main") || document.querySelector(".job-card-wrap") || document.querySelector(".job-card-wrapper"));
         }
+        getJobsPageMountContainer() {
+          return document.querySelector(".page-jobs-main") || document.querySelector(".job-list-container") || document.querySelector(".job-recommend-result") || document.querySelector(".job-list-box");
+        }
         getMountEle() {
           return new Promise((resolve) => {
             let count = 0;
@@ -8329,7 +8332,7 @@ System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus']
               }
               if (this.curUrl.includes("www.zhipin.com/web/geek/jobs")) {
                 if (this.isJobsPageReady()) {
-                  element = document.body;
+                  element = this.getJobsPageMountContainer();
                   p = "floating";
                 }
               } else if (this.curUrl.includes("www.zhipin.com/web/geek/job")) {
@@ -8359,11 +8362,11 @@ System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus']
         }
         async getRenderComponent() {
           if (this.curUrl.includes("www.zhipin.com/web/geek/chat")) {
-            let promise = __vitePreload(() => module.import('./BossMessage-YNyCdM1K-DSZWNMwr.js'), void 0 );
+            let promise = __vitePreload(() => module.import('./BossMessage-C6zhk-Bu-Bb2Myrxt.js'), void 0 );
             return promise.then((item) => item.default);
           }
           if (this.curUrl.includes("www.zhipin.com/web/geek/job") || this.curUrl.includes("overseas")) {
-            let promise = __vitePreload(() => module.import('./BossJobList-DdjAif01-VfUQ1eDf.js'), void 0 );
+            let promise = __vitePreload(() => module.import('./BossJobList-DvLOxLPZ-KZ2rEN1E.js'), void 0 );
             return promise.then((item) => item.default);
           }
         }
@@ -8912,7 +8915,7 @@ System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus']
           attachRootApp();
         };
         if (shouldEnableBossWebSocketHook(location.href)) {
-          __vitePreload(() => module.import('./hookMain-PxSjGYLo-W1XYFMtY.js'), void 0 ).catch((error) => {
+          __vitePreload(() => module.import('./hookMain-Beb6Yfw4-CLDcgiU1.js'), void 0 ).catch((error) => {
             logger.error("加载 BOSS WebSocket hook 失败", error);
           });
         }
@@ -8950,7 +8953,7 @@ System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus']
             let p = elP.p;
             rootApp.classList.toggle("ai-job-floating", p === "floating");
             if (p === "floating") {
-              currentBody.appendChild(rootApp);
+              containerEle.appendChild(rootApp);
             } else if (p === "before") {
               (_a = containerEle.parentElement) == null ? void 0 : _a.insertBefore(rootApp, containerEle);
             } else if (p === "end") {
@@ -8981,7 +8984,7 @@ System.register("./__monkey.entry-j75aQUo4.js", ['vue', 'pinia', 'element-plus']
   };
 }));
 
-System.register("./BossMessage-YNyCdM1K-DSZWNMwr.js", ['./_plugin-vue_export-helper-C3Ezwotf-BRnLcq5n.js', 'vue', './__monkey.entry-j75aQUo4.js', './bossPlatform-C4gONZjG-CQN3eFd8.js', 'pinia', 'element-plus'], (function (exports, module) {
+System.register("./BossMessage-C6zhk-Bu-Bb2Myrxt.js", ['./_plugin-vue_export-helper-C3Ezwotf-BRnLcq5n.js', 'vue', './__monkey.entry-efAb2rZX.js', './bossPlatform-C8srnfg2-BNkIMxOy.js', 'pinia', 'element-plus'], (function (exports, module) {
   'use strict';
   var _export_sfc, ElButton, ElInput, defineComponent, ref, openBlock, createElementBlock, Fragment, createVNode, withCtx, createTextVNode, createElementVNode, createCommentVNode, pushScopeId, popScopeId, ElMessage, Message, Tools, AiPower, BossOption;
   return {
@@ -9207,7 +9210,7 @@ System.register("./BossMessage-YNyCdM1K-DSZWNMwr.js", ['./_plugin-vue_export-hel
   };
 }));
 
-System.register("./BossJobList-DdjAif01-VfUQ1eDf.js", ['vue', './_plugin-vue_export-helper-C3Ezwotf-BRnLcq5n.js', './__monkey.entry-j75aQUo4.js', 'element-plus', './bossPlatform-C4gONZjG-CQN3eFd8.js', 'pinia'], (function (exports, module) {
+System.register("./BossJobList-DvLOxLPZ-KZ2rEN1E.js", ['vue', './_plugin-vue_export-helper-C3Ezwotf-BRnLcq5n.js', './__monkey.entry-efAb2rZX.js', 'element-plus', './bossPlatform-C8srnfg2-BNkIMxOy.js', 'pinia'], (function (exports, module) {
   'use strict';
   var ref, defineComponent, computed$1, watch, provide, reactive, toRefs, openBlock, createElementBlock, normalizeClass, unref, renderSlot, inject, onMounted, onBeforeUnmount, onUpdated, createVNode, Fragment, useSlots, withCtx, createBlock, resolveDynamicComponent, normalizeStyle, createTextVNode, toDisplayString, createCommentVNode, createElementVNode, TransitionGroup, nextTick, withDirectives, cloneVNode, Text$1, Comment, mergeProps, toRef, Teleport, Transition, vShow, readonly, onDeactivated, useAttrs, withModifiers, isRef, vModelCheckbox, toHandlers, withKeys, h$1, createSlots, getCurrentInstance, watchEffect, renderList, onUnmounted, onBeforeMount, shallowRef, isVNode, toRaw$1, onScopeDispose, resolveComponent, resolveDirective, vModelText, render, pushScopeId, popScopeId, createStaticVNode, isSymbol$1, buildProp, buildProps, definePropType, useFormSize, useNamespace, debugWarn, formContextKey, formItemContextKey, throwError, useResizeObserver, useId, refDebounced, addUnit, isBoolean, isString, withInstall, withNoopInstall, useEventListener, NOOP, isObject$1, unrefElement, isElement, isNil, isNumber, circle_close_default, useSizeProp, useFormItem, isArray$1, clock_default, calendar_default, onClickOutside, ElInput, ElIcon, isClient, useFormItemInputId, close_default, arrow_right_default, useDeprecated, isUndefined$1, useFormDisabled, UPDATE_MODEL_EVENT, arrow_down_default, minus_default, arrow_up_default, plus_default, iconPropType, CHANGE_EVENT, useMutationObserver, d_arrow_left_default, more_filled_default, d_arrow_right_default, warning_filled_default, circle_check_default, check_default, isFunction$1, INPUT_EVENT, loading_default, addClass, removeClass, document_default, zoom_in_default, delete_default, useGetDerivedNamespace, useIdInjection, useGlobalConfig, componentSizes, _export_sfc$1, isEmpty, isPropAbsent, mutable, CloseComponents, hasClass, useTimeoutFn, more_default, useFocusController, ValidateComponentsMap, toRawType, arrow_left_default, isPromise, hasOwn, isPlainObject$1, useVModel, _export_sfc, getStyle, tryOnScopeDispose, isDate, defaultNamespace, TinyColor, fromPairs, isKorean, hasChanged, ElButton, ElButtonGroup, commonjsGlobal, LogRecorder, getDefaultExportFromCjs, ServerStore, UserSyncStore, PushStatus, pushResultCount, UserStore, logger, isProdEnv, Tools, ElMessage, loginInterceptor, axios, fetchWithGM_request, TampermonkeyApi, request, LoginStore, silentlyLogin, NeedsImportError, ElNotification, ElMessageBox;
   return {
@@ -36541,7 +36544,7 @@ System.register("./_plugin-vue_export-helper-C3Ezwotf-BRnLcq5n.js", ['vue'], (fu
   };
 }));
 
-System.register("./hookMain-PxSjGYLo-W1XYFMtY.js", ['./__monkey.entry-j75aQUo4.js', './bossPlatform-C4gONZjG-CQN3eFd8.js', 'vue', 'pinia', 'element-plus'], (function (exports, module) {
+System.register("./hookMain-Beb6Yfw4-CLDcgiU1.js", ['./__monkey.entry-efAb2rZX.js', './bossPlatform-C8srnfg2-BNkIMxOy.js', 'vue', 'pinia', 'element-plus'], (function (exports, module) {
   'use strict';
   var Logger, LogLevel, Tools, LogRecorder, logger$1, protoDefinition, AiPower, UserStore, protobufType, BossOption;
   return {
@@ -36957,7 +36960,7 @@ function getQueryString(name) {
   };
 }));
 
-System.register("./bossPlatform-C4gONZjG-CQN3eFd8.js", ['./__monkey.entry-j75aQUo4.js', 'element-plus'], (function (exports, module) {
+System.register("./bossPlatform-C8srnfg2-BNkIMxOy.js", ['./__monkey.entry-efAb2rZX.js', 'element-plus'], (function (exports, module) {
   'use strict';
   var LogRecorder, UserStore, logger, axios, Tools, AiPower, ElMessage, MessageRead, Message, MessageCache, ElNotification;
   return {

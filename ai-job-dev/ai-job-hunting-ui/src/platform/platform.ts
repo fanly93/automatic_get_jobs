@@ -245,6 +245,13 @@ class BossPlatform extends AbsPlatform {
         );
     }
 
+    private getJobsPageMountContainer(): Element | null {
+        return document.querySelector(".page-jobs-main") ||
+            document.querySelector(".job-list-container") ||
+            document.querySelector(".job-recommend-result") ||
+            document.querySelector(".job-list-box")
+    }
+
     getMountEle(): Promise<ElementP> {
         return new Promise<ElementP>((resolve) => {
             let count: number = 0;
@@ -262,7 +269,7 @@ class BossPlatform extends AbsPlatform {
                 }
                 if (this.curUrl.includes("www.zhipin.com/web/geek/jobs")) {
                     if (this.isJobsPageReady()) {
-                        element = document.body;
+                        element = this.getJobsPageMountContainer();
                         p = "floating";
                     }
                 } else if (this.curUrl.includes("www.zhipin.com/web/geek/job")) {
