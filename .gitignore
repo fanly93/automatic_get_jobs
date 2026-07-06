@@ -30,6 +30,9 @@ ai-job-dev/ai-job-hunting-server/src/main/resources/docker/ai-job.jar
 # Claude 本地设置
 .claude/
 
+# 本地隔离工作区
+.worktrees/
+
 # 临时备份的 ai-job-dev git 历史
 ai-job-dev/.git_backup_phase_a/
 # 嵌套 git 目录不纳入
