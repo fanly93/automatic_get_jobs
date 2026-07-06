@@ -23,6 +23,7 @@ import {isProdEnv} from "../../utils/tools";
 import Test from "../test/Test.vue";
 import ReadMe from "./UseDocument.vue";
 import AiConfig from "./AiConfig.vue";
+import Diagnostics from "./Diagnostics.vue";
 
 interface Comp {
     component: any;
@@ -38,6 +39,7 @@ componentMap.set('1', {component: AiJob, name: 'AI 助手'});
 componentMap.set('2', {component: Preference, name: '偏好设置'});
 componentMap.set('3', {component: RunRecord, name: '运行记录'});
 componentMap.set('4', {component: AiConfig, name: 'AI 配置'});
+componentMap.set('5', {component: Diagnostics, name: '诊断'});
 componentMap.set('6', {component: ReadMe, name: '使用文档'});
 if (!isProdEnv()) {
     componentMap.set('7', {component: Test, name: '调试测试'});

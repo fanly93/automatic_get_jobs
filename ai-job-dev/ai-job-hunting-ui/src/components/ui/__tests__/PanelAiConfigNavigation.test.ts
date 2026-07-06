@@ -59,6 +59,7 @@ vi.mock('../AiJob.vue', () => ({ default: { template: '<div>AI assistant stub</d
 vi.mock('../Preference.vue', () => ({ default: { template: '<div>Preference stub</div>' } }))
 vi.mock('../RunRecord.vue', () => ({ default: { template: '<div>Run record stub</div>' } }))
 vi.mock('../UseDocument.vue', () => ({ default: { template: '<div>Use document stub</div>' } }))
+vi.mock('../Diagnostics.vue', () => ({ default: { template: '<div>Diagnostics stub</div>' } }))
 vi.mock('../../test/Test.vue', () => ({ default: { template: '<div>Debug test stub</div>' } }))
 
 import Panel from '../Panel.vue'

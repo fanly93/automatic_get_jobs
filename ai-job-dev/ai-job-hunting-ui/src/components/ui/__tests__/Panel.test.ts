@@ -13,6 +13,7 @@ vi.mock('../RunRecord.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../UseDocument.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../InvitationExchange.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../AiConfig.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../Diagnostics.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../../test/Test.vue', () => ({ default: { template: '<div />' } }))
 
 import Panel from '../Panel.vue'
@@ -29,6 +30,19 @@ describe('Panel', () => {
     })
 
     expect(wrapper.text()).not.toContain('邀请兑换')
+  })
+
+  it('registers the diagnostics menu entry', () => {
+    const wrapper = mount(Panel, {
+      global: {
+        stubs: {
+          'el-menu': { template: '<nav><slot /></nav>' },
+          'el-menu-item': { template: '<button><slot /></button>' },
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('诊断')
   })
 
   it('keeps menu clicks from bubbling into the host page', async () => {
