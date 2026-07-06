@@ -33,6 +33,10 @@ ai-job-dev/ai-job-hunting-server/src/main/resources/docker/ai-job.jar
 # 本地隔离工作区
 .worktrees/
 
+# Codex 本地工具与浏览器测试产物
+.codex/
+.playwright-cli/
+
 # 临时备份的 ai-job-dev git 历史
 ai-job-dev/.git_backup_phase_a/
 # 嵌套 git 目录不纳入
