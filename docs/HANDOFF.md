@@ -227,6 +227,7 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
 
 ### 🔶 Phase E：BOSS 端到端验证（手动，需浏览器+真实账号）
 - Task 12：装油猴脚本、配置 DeepSeek、触发 AI 坐席、验证网络面板无旧服务器请求
+- **重要**：真实 BOSS 页面不要再用 Playwright / Chrome Plugin / CDP / DevTools 接管或导航，会触发 BOSS 反自动化后跳到 `about:blank`。后续验证策略见 `docs/phase-e/boss-automation-detection-and-verification.md`。
 
 ### 🔶 全部完成后：完整测试套件
 后端单测 + 集成测试 + 前端 Vitest + curl 脚本 + 端到端清单，五层完整流程测试。
@@ -253,6 +254,8 @@ AI-Job/                          ← git 根仓库（推送到 GitHub）
 |-----------|--------|
 | **完整设计 spec**（目标/范围/改动清单/验收） | `docs/superpowers/specs/2026-06-24-ai-job-secondary-dev-design.md` |
 | **完整实现计划**（12 任务逐步骤+代码） | `docs/superpowers/plans/2026-06-24-ai-job-secondary-dev.md` |
+| **Phase E BOSS 反自动化发现与验证策略** | `docs/phase-e/boss-automation-detection-and-verification.md` |
+| **Phase E BOSS DOM 周期性清空根因** | `docs/phase-e/boss-jobs-dom-cycle-root-cause.md` |
 | **付费机制深度分析**（去付费原理、校验点、改法） | `reference_projects/ai-job-analysis/02-payment-and-model-integration.md` |
 | **架构/技术栈/模块/功能** | `reference_projects/ai-job-analysis/03-architecture-and-tech-stack.md` |
 | **安装使用**（部署命令、端到端步骤、坑） | `reference_projects/ai-job-analysis/01-installation-and-usage.md` |
@@ -305,13 +308,20 @@ export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 - 改前端源码后必须重编译（Phase C Task 6）
 - 脚本运行在浏览器+Tampermonkey，**不能 Docker 化**
 
-### 12.6 测试策略
+### 12.6 BOSS 真页验证不要用 CDP/Playwright/Chrome Plugin
+- 2026-07-05 已确认：真实 BOSS jobs 页会检测主动浏览器自动化/调试控制。`playwright-cli attach --cdp=chrome`、Playwright 新开/导航标签、Codex Chrome Plugin 接管、DevTools/F12 都可能导致页面短暂加载后变成 `about:blank`。
+- `navigator.webdriver === false` 仍会触发，公开资料和项目讨论显示 BOSS 可能检测 CDP runtime/debugger 副作用。
+- 后续真实 BOSS 页面只用人工操作或 macOS Accessibility 级别键鼠模拟；Codex 不要通过 CDP 读取 DOM、截图、点击或导航 BOSS。
+- 需要结构化观测时，优先在油猴脚本里增加诊断面板/导出/本地后端日志，再由 Codex 读取本地日志。
+- 详细操作清单见 `docs/phase-e/boss-automation-detection-and-verification.md`。
+
+### 12.7 测试策略
 - 项目原本无测试基建，本次新建
 - 后端测试用 MockServer/WireMock 模拟 AI 端点，不真实调厂商（避免费用）
 - 前端 Vitest + jsdom mock `GM_*` API
 - 集成测试需 MySQL（Phase D 用 Phase B 的容器）
 
-### 12.7 正确仓库路径
+### 12.8 正确仓库路径
 - 后续任务只在 `/Users/tanglin/VibeCoding/GetJobs/AI-Job/` 继续。
 - 不要在 `/Users/tanglin/VibeCoding/AIStockMonitoring/` 下处理本项目。
 - 误创建的 `/Users/tanglin/VibeCoding/AIStockMonitoring/automatic_get_jobs` 已删除。
@@ -327,8 +337,9 @@ export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 4. **当前分支**：Phase B 产物在 `phase-b-docker-compose`，已推送到 GitHub
 5. **下一步 Phase C**：按 `docs/superpowers/plans/2026-06-24-ai-job-secondary-dev.md` 的 Task 4/5/6/10 执行
 6. **每个 mvn 命令带 `JAVA_HOME`**（见 12.1）
-7. **完成后在根仓库 commit + push**
-8. **每阶段结束停下汇报**，等用户确认再进下一阶段（用户的工作习惯）
+7. **真实 BOSS 页验证先读 `docs/phase-e/boss-automation-detection-and-verification.md`**，不要用 CDP/Playwright/Chrome Plugin 接管
+8. **完成后在根仓库 commit + push**
+9. **每阶段结束停下汇报**，等用户确认再进下一阶段（用户的工作习惯）
 
 ---
 
