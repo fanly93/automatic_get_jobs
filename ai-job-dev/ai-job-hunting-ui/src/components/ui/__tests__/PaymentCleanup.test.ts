@@ -207,4 +207,18 @@ describe('payment UI cleanup', () => {
     expect(aiConfig).toContain("ensureUserReady('save-ai-config')")
     expect(aiConfig).toContain("ensureUserReady('test-ai-config')")
   })
+
+  it('records diagnostics events at assistant mount boundaries without controlling BOSS', () => {
+    const main = readSource('../../../main.ts')
+
+    expect(main).toContain("import {recordDiagnosticEvent} from './diagnostics/events'")
+    expect(main).toContain("recordDiagnosticEvent('main:mount-app'")
+    expect(main).toContain("recordDiagnosticEvent('main:attach-start'")
+    expect(main).toContain("recordDiagnosticEvent('main:attach-success'")
+    expect(main).toContain("recordDiagnosticEvent('main:attach-error'")
+    expect(main).toContain("recordDiagnosticEvent('main:reattach-request'")
+    expect(main).not.toContain('document.addEventListener')
+    expect(main).not.toContain('location.href =')
+    expect(main).not.toContain('window.location.reload()')
+  })
 })

@@ -9,6 +9,7 @@ import axios from "./axios";
 import ElementPlus from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import {isProdEnv} from "./utils/tools";
+import {recordDiagnosticEvent} from './diagnostics/events'
 
 import {ServerStore} from "./stores/server";
 
@@ -88,6 +89,10 @@ if (existingSingleton) {
             return;
         }
         rootAttachInProgress = true
+        recordDiagnosticEvent('main:attach-start', '开始挂载 AI 助手', {
+            href: location.href,
+            bodyChildCount: currentBody.children.length,
+        })
         try {
             const elP = await platform.getMountEle()
             let containerEle = elP.el
@@ -105,6 +110,17 @@ if (existingSingleton) {
                     containerEle.firstElementChild
                 );
             }
+            recordDiagnosticEvent('main:attach-success', 'AI 助手挂载成功', {
+                mode: p || 'prepend',
+                parentTag: rootApp.parentElement?.tagName || '',
+                parentClass: rootApp.parentElement?.className?.toString() || '',
+                bodyDirectChild: rootApp.parentElement === document.body,
+            })
+        } catch (error) {
+            recordDiagnosticEvent('main:attach-error', 'AI 助手挂载失败', {
+                error: error instanceof Error ? error.message : String(error),
+            })
+            throw error
         } finally {
             rootAttachInProgress = false
         }
@@ -114,6 +130,9 @@ if (existingSingleton) {
         new MutationObserver(() => {
             const currentBody = document.body
             if (appMounted && currentBody && !currentBody.contains(rootApp)) {
+                recordDiagnosticEvent('main:reattach-request', '检测到 AI 助手被移除，准备重新挂载', {
+                    source: 'mutation-observer',
+                })
                 attachRootApp()
             }
         }).observe(document.documentElement, {
@@ -125,6 +144,9 @@ if (existingSingleton) {
             recoveryTimer = window.setInterval(() => {
                 const currentBody = document.body
                 if (appMounted && currentBody && !currentBody.contains(rootApp)) {
+                    recordDiagnosticEvent('main:reattach-request', '检测到 AI 助手被移除，准备重新挂载', {
+                        source: 'timer',
+                    })
                     attachRootApp()
                 }
             }, 1000)
@@ -134,6 +156,7 @@ if (existingSingleton) {
     function mountApp() {
         if (!appMounted) {
             app.mount(rootApp)
+            recordDiagnosticEvent('main:mount-app', 'Vue 应用已挂载到 AI 助手根节点')
             appMounted = true
             startRootRecoveryObserver()
         }
