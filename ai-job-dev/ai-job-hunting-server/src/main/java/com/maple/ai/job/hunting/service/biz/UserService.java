@@ -25,6 +25,7 @@ import com.maple.ai.job.hunting.model.bo.UserResumeDO;
 import com.maple.ai.job.hunting.model.vo.UserInfoVO;
 import com.maple.ai.job.hunting.service.ai.AIServiceFacade;
 import com.maple.ai.job.hunting.utils.FileTypeDetector;
+import com.maple.ai.job.hunting.utils.ResumeTextExtractor;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -86,8 +87,14 @@ public class UserService {
         StopWatch watch = new StopWatch("导入简历");
         // 1. ai读取总结简历文件
         watch.start("AI识别简历");
-        AiFileResolveResult aiFileResolveResult = aiServiceFacade.readFile(inputStream1, AIPromptStrConstant.AI_SEAT_SYSTEM_PROMPT);
-        String summarize = aiFileResolveResult.getOriginalFileContent();
+        String summarize;
+        try {
+            AiFileResolveResult aiFileResolveResult = aiServiceFacade.readFile(inputStream1, AIPromptStrConstant.AI_SEAT_SYSTEM_PROMPT);
+            summarize = aiFileResolveResult.getOriginalFileContent();
+        } catch (Exception e) {
+            log.warn("AI识别简历失败，改用本地文本提取: {}", e.getMessage());
+            summarize = ResumeTextExtractor.extractText(inputStream2.readAllBytes());
+        }
         watch.stop();
 
         // 2. 正则匹配邮箱手机
@@ -222,7 +229,7 @@ public class UserService {
         }
 
         if (StringUtils.isBlank(phone) || StringUtils.isBlank(email)) {
-            log.warn("简历正则匹配失败 phone:{} email:{} resume:{}", phone, email, summarize);
+            log.warn("简历正则匹配失败 phone:{} email:{} resumeLength:{}", phone, email, summarize.length());
         }
 
         return new UserInfoVO(phone, email);

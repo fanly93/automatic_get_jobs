@@ -120,6 +120,12 @@
             <version>2.11.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.30</version>
+        </dependency>
+
         <!-- Lombok：原项目未声明依赖，仅靠 IDE 插件/本地 .m2 编译，命令行 mvn 无法编译。显式接入并锁定兼容版本（BOM 的 1.18.32 与 JDK17 javac 有 TypeTag 兼容问题，升到 1.18.36） -->
         <dependency>
             <groupId>org.projectlombok</groupId>
