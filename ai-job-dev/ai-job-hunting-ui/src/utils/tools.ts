@@ -113,6 +113,7 @@ export async function fetchWithGM_request(url: string, options: any) {
             headers: options.headers,
             responseType: options.responseType || 'json', // 默认为json，根据需要修改
             data: options.data,
+            timeout: options.timeout || 15000,
             onload: response => {
                 if (response.status === 200) {
                     resolve(response);

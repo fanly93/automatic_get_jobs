@@ -131,6 +131,7 @@ import {ElNotification} from "element-plus";
 import {LogRecorder} from "../../logging/record";
 import {ensureUserReady} from "../../stores/remote";
 import {UserSyncStore} from "../../stores/userSync";
+import {recordDiagnosticEvent} from '../../diagnostics/events';
 
 const platform = inject('$platform') as AbsPlatform;
 const axios = inject('$axios') as AxiosInstance
@@ -267,59 +268,85 @@ const handlerImport = async () => {
     }
 
     importResumeLoading.value = true;
-    // 获取简历id
-    let resumeInfoResp = await axiosOriginal.get("https://www.zhipin.com/wapi/zpgeek/resume/sidebar.json", {headers: {"Zp_token": token}} as {})
-    let zpData = resumeInfoResp.data.zpData;
-    if (!zpData.attachmentList || zpData.attachmentList.length == 0) {
-        importResumeLoading.value = false;
-        ElMessage({
-            message: "请先在BOSS个人中心上传附件简历；作为ai坐席定制化回复的基础",
-            type: 'error',
-            duration: 3000
+    recordDiagnosticEvent('import-resume:start', '开始导入简历', {
+        tokenPresent: Boolean(token),
+        bossUserIdPresent: Boolean(bossUserId)
+    })
+    try {
+        // 获取简历id
+        let resumeInfoResp = await axiosOriginal.get("https://www.zhipin.com/wapi/zpgeek/resume/sidebar.json", {
+            headers: {"Zp_token": token},
+            timeout: 10000
+        } as {})
+        let zpData = resumeInfoResp.data.zpData;
+        const attachmentCount = zpData?.attachmentList?.length || 0
+        recordDiagnosticEvent('import-resume:sidebar-success', 'BOSS简历侧栏读取成功', {
+            attachmentCount
         })
-        return;
-    }
-    let resumeId = zpData.attachmentList[0].resumeId
+        if (!zpData.attachmentList || zpData.attachmentList.length == 0) {
+            ElMessage({
+                message: "请先在BOSS个人中心上传附件简历；作为ai坐席定制化回复的基础",
+                type: 'error',
+                duration: 3000
+            })
+            return;
+        }
+        let resumeId = zpData.attachmentList[0].resumeId
 
-    // 获取简历文件
-    let resumeFileResp: any = await fetchWithGM_request("https://docdownload.zhipin.com/wflow/zpgeek/download/download4geek?resumeId=" + resumeId,
-        {headers: {"Zp_token": token}, responseType: 'arraybuffer'} as {})
-    let fileBlob = new Blob([resumeFileResp.response], {type: 'application/pdf'});
+        // 获取简历文件
+        let resumeFileResp: any = await fetchWithGM_request("https://docdownload.zhipin.com/wflow/zpgeek/download/download4geek?resumeId=" + resumeId,
+            {headers: {"Zp_token": token}, responseType: 'arraybuffer', timeout: 30000} as {})
+        let fileBlob = new Blob([resumeFileResp.response], {type: 'application/pdf'});
+        recordDiagnosticEvent('import-resume:download-success', 'BOSS附件简历下载成功', {
+            resumeIdPresent: Boolean(resumeId),
+            fileBytes: fileBlob.size
+        })
 
-    // 导入简历
-    let formData = new FormData();
-    formData.append("file", fileBlob)
-    formData.append("resumeId", resumeId)
-    formData.append("uniqueId", bossUserId)
-    let importResp = await axios.post("/api/user/import/resume", formData, {headers: {'Content-Type': "multipart/form-data"}})
-    if (importResp.data.code != 200) {
+        // 导入简历
+        let formData = new FormData();
+        formData.append("file", fileBlob)
+        formData.append("resumeId", resumeId)
+        formData.append("uniqueId", bossUserId)
+        let importResp = await axios.post("/api/user/import/resume", formData, {headers: {'Content-Type': "multipart/form-data"}})
+        if (importResp.data.code != 200) {
+            ElMessage({
+                message: "导入简历失败" + (importResp.data.data?.msg || importResp.data.message || ''),
+                type: 'error',
+                duration: 3000
+            })
+            return;
+        }
+        recordDiagnosticEvent('import-resume:backend-success', '本地后端导入简历成功', {
+            emailPresent: Boolean(importResp.data.data?.email)
+        })
+        let loginResp = await axios.post("/api/user/silently/login?uniqueId=" + bossUserId)
+        localStorage.setItem('Authorization', loginResp.data.data);
+        userSyncStore.clearNeedsImport(bossUserId);
+        await ensureUserReady('import-resume');
+        if(!importResp.data.data.email){
+            ElMessage({
+                message: "导入简历成功；但未识别到邮箱，请在偏好设置中完善[通知邮箱]",
+                type: 'warning',
+                duration: 3000
+            })
+            return;
+        }
         ElMessage({
-            message: "导入简历失败" + importResp.data.data.msg,
+            message: "导入简历成功",
+            type: 'success',
+            duration: 3000
+        });
+    } catch (error: any) {
+        const message = error?.message || '未知错误'
+        recordDiagnosticEvent('import-resume:error', '导入简历失败', {message})
+        ElMessage({
+            message: `导入简历失败：${message}`,
             type: 'error',
-            duration: 3000
+            duration: 5000
         })
-        importResumeLoading.value = false;
-        return;
+    } finally {
+        importResumeLoading.value = false
     }
-    let loginResp = await axios.post("/api/user/silently/login?uniqueId=" + bossUserId)
-    localStorage.setItem('Authorization', loginResp.data.data);
-    userSyncStore.clearNeedsImport(bossUserId);
-    await ensureUserReady('import-resume');
-    if(!importResp.data.data.email){
-        ElMessage({
-            message: "导入简历成功；但未识别到邮箱，请在偏好设置中完善[通知邮箱]",
-            type: 'warning',
-            duration: 3000
-        })
-        importResumeLoading.value = false;
-        return;
-    }
-    ElMessage({
-        message: "导入简历成功",
-        type: 'success',
-        duration: 3000
-    });
-    importResumeLoading.value = false;
 }
 const handlerPush = () => {
     switch (pushStatus.value) {

@@ -221,4 +221,21 @@ describe('payment UI cleanup', () => {
     expect(main).not.toContain('location.href =')
     expect(main).not.toContain('window.location.reload()')
   })
+
+  it('makes resume import observable and always resets loading state', () => {
+    const aiJob = readSource('../AiJob.vue')
+    const tools = readSource('../../../utils/tools.ts')
+
+    expect(aiJob).toContain("import {recordDiagnosticEvent} from '../../diagnostics/events'")
+    expect(aiJob).toContain("recordDiagnosticEvent('import-resume:start'")
+    expect(aiJob).toContain("recordDiagnosticEvent('import-resume:sidebar-success'")
+    expect(aiJob).toContain("recordDiagnosticEvent('import-resume:download-success'")
+    expect(aiJob).toContain("recordDiagnosticEvent('import-resume:backend-success'")
+    expect(aiJob).toContain("recordDiagnosticEvent('import-resume:error'")
+    expect(aiJob).toContain('finally {')
+    expect(aiJob).toContain('importResumeLoading.value = false')
+    expect(aiJob).toContain('timeout: 10000')
+    expect(aiJob).toContain('timeout: 30000')
+    expect(tools).toContain('timeout: options.timeout || 15000')
+  })
 })
